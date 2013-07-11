@@ -1,1 +1,1 @@
-web: node week1/node.js
+web: node node.js
