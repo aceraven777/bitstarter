@@ -22,6 +22,7 @@ References:
 */
 
 var fs = require('fs');
+var http = require('http');
 var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
@@ -36,6 +37,11 @@ var assertFileExists = function(infile) {
     return instr;
 };
 
+var assertFileExists2 = function(infile) {
+  return infile;
+    
+};
+
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
@@ -44,8 +50,7 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkInput = function($, checksfile) {
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -61,14 +66,37 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
+var print_output = function(checkJson) {
+    console.log(JSON.stringify(checkJson, null, 4));
+};
+
 if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <url_path>', 'Full URL Path')
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    
+    var checkJson;
+    if(program.url){
+      var output="";
+      http.get(program.url, function(res) {
+        res.on('data', function (chunk) {
+          output+=chunk;
+        });
+        res.on('end', function () {
+          checkJson = checkInput(cheerio.load(output), program.checks);
+          print_output(checkJson);
+        });
+      }).on('error', function(e) {
+        console.log("%s does not exist. Exiting.", program.url);
+        process.exit(1);
+      });
+    }
+    else{
+      checkJson = checkInput(cheerioHtmlFile(program.file), program.checks);
+      print_output(checkJson);
+    }
 } else {
-    exports.checkHtmlFile = checkHtmlFile;
+    exports.checkInput = checkInput;
 }
