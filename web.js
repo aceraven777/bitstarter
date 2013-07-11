@@ -6,7 +6,7 @@ app.get('/', function(request, response) {
 	response.send("sdfsdf");
 	var fs = require('fs');
 	var output;
-	fs.writeFileSync("index.html", output);
+	fs.readFileSync("index.html", output);
 	response.send(output);
 });
 
